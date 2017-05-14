@@ -157,5 +157,10 @@ class Pgq::ConsumerBase
     @logger.error(mes) if @logger
   end
 
-
+  private
+  def sysconfig
+    return @sysconfig if @sysconfig.present?
+    path = File.join File.dirname(__FILE__), '../../../../../config/cdr_billing.yml'
+    @sysconfig = YAML.load(File.read(path))
+  end
 end

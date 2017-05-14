@@ -18,3 +18,5 @@ tmp
 .idea
 .kdev4
 /.rvmrc
+
+pgq-processors/.rspec_status
