@@ -9,6 +9,7 @@ gem 'activeresource-persistent', require: 'active_resource/persistent'
 gem 'http_logger'
 gem 'syslog-logger'
 gem 'pony'
+gem 'rest-client'
 
 group :test, :development do
   gem 'rspec'

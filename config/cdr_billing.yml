@@ -5,4 +5,14 @@ pid_file: "/run/yeti-cdr-billing/yeti-cdr-billing.pid"
 mail_to: "bug-report@yeti-switch.org"
 mail_from: "yeti-cdr-billing@example.com"
 mail_subject: "Exception happened in CDR billing"
-external_crd_endpoint: "http://example.com/api/cdrs"
+external_crd_endpoint:
+  url: "http://example.com/api/cdrs"
+  method: POST
+  # may be an array:
+  #  cdr_fields: [
+  #                 'id', 'src_prefix_in', 'src_prefix_out', 'dst_prefix_in', 'dst_prefix_out', 'time_start',
+  #                 'time_connect', 'time_end',  'duration', 'customer', 'vendor',  'destination_fee',
+  #                 'destination_initial_interval', 'destination_initial_rate', 'destination_next_interval',
+  #                 'destination_next_rate', 'customer_price',  'orig_call_id', 'local_tag', 'term_call_id'
+  #              ]
+  cdr_fields: all

@@ -1,9 +1,9 @@
-require 'net/http'
-require 'uri'
+require 'rest-client'
 
 class  CdrBilling < Pgq::ConsumerGroup
-  @consumer_name = 'cdr_billing'
+  AVAILABLE_HTTP_METHODS = [:post, :put, :get, :patch]
 
+  @consumer_name = 'cdr_billing'
 
   def perform_events(events)
     group = []
@@ -16,27 +16,12 @@ class  CdrBilling < Pgq::ConsumerGroup
   def perform_group(group)
     ::RoutingBase.execute_sp('SELECT * FROM billing.bill_cdr_batch(?, ?)', @batch_id, self.coder.dump(group))
 
-    send_events_to_external group
+    send_events_to_external group if need_send_external_request?
   end
 
   private
-
-  def send_events_to_external(group)
-    group.map { |event| send_event_to_external event }
-  end
-
-  def send_event_to_external(event)
-    logger.info "Sending cdr #{event.try :id}"
-
-    uri = URI sysconfig['external_crd_endpoint']
-
-    response = Net::HTTP.start(uri.host, uri.port) do |http|
-      request =  Net::HTTP::Post.new uri, 'Content-Type': 'application/json'
-      request.body = self.coder.dump event
-      http.request request
-    end
-
-    log_response response
+  def external_endpoint_config
+    sysconfig['external_crd_endpoint']
   end
 
   def log_response(response)
@@ -47,5 +32,49 @@ class  CdrBilling < Pgq::ConsumerGroup
     end
 
     response
+  end
+
+  def make_request_params(data)
+    if http_method == :get
+      [{ params: data }]
+    else
+      [data.to_json, {content_type: :json, accept: :json}]
+    end
+  end
+
+  def http_method
+    external_endpoint_config['method'].downcase.to_sym
+  end
+
+  def need_send_external_request?
+    external_endpoint_config.present?
+  end
+
+  def permit_field_for(event)
+    permitted_field = external_endpoint_config['cdr_fields']
+
+    if permitted_field == 'all' || permitted_field.nil?
+      event.dup
+    else
+      event.select { |key, value| permitted_field.include? key.to_s }
+    end
+  end
+
+  def send_event_to_external(event)
+    method = http_method
+
+    unless AVAILABLE_HTTP_METHODS.include? method
+      raise ArgumentError.new 'external_crd_endpoint.method should be one of post, put, get patch'
+    end
+
+    logger.info "Sending cdr #{event.try :id}"
+
+    response = RestClient.try(method, external_endpoint_config['url'], *make_request_params(permit_field_for(event)))
+
+    log_response response
+  end
+
+  def send_events_to_external(group)
+    group.map { |event| send_event_to_external event }
   end
 end
