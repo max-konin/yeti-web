@@ -72,6 +72,10 @@ class  CdrBilling < Pgq::ConsumerGroup
     response = RestClient.try(method, external_endpoint_config['url'], *make_request_params(permit_field_for(event)))
 
     log_response response
+
+  rescue => e
+    logger.error e.message
+    logger.error e.backtrace.join "\n"
   end
 
   def send_events_to_external(group)
